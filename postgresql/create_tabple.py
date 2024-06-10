@@ -2,38 +2,30 @@ from create_connection import PostgreSQLConnection
 
 
 with PostgreSQLConnection() as cursor:
-
         cursor.execute("""
-        DROP TABLE IF EXISTS users, accounts, users_accounts CASCADE
+        DROP TABLE IF EXISTS users, accounts CASCADE
         """)
 
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
-            telegram_id INTEGER PRIMARY KEY
+            telegram_id INTEGER PRIMARY KEY,
+            first_name TEXT,
+            last_name TEXT,
+            username TEXT,
+            just_registered BOOLEAN DEFAULT TRUE,
+            is_verified BOOLEAN DEFAULT FALSE
         );
         """)
 
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS accounts (
             id SERIAL PRIMARY KEY,
-            name TEXT NOT NULL UNIQUE
-        );
-
-        """)
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS users_accounts (
-            user_id INTEGER,
-            account_id INTEGER,
-            just_registered BOOLEAN DEFAULT TRUE,
-            is_verified BOOLEAN DEFAULT FALSE,
-            amount NUMERIC NOT NULL,
+            name TEXT NOT NULL UNIQUE,
+            amount INTEGER,
             demand_time TIMESTAMPTZ,
-            PRIMARY KEY (user_id, account_id),
+            user_id INTEGER,
             CONSTRAINT fk_user
                 FOREIGN KEY (user_id)
-                REFERENCES users (telegram_id),
-            CONSTRAINT fk_account
-                FOREIGN KEY (account_id)
-                REFERENCES accounts (id)
+                REFERENCES users (telegram_id)
         );
         """)
