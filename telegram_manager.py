@@ -1,13 +1,10 @@
 import os
-import sys
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 from dotenv import load_dotenv
 import telebot
 from telebot import types
 
-from postgresql.create_connection import PostgreSQLConnection
+from create_connection import PostgreSQLConnection
 
 
 load_dotenv()
@@ -20,7 +17,8 @@ maksim_chat_id = os.getenv('MAKSIM_CHAT_ID')
 def add(message: types.Message):
     if message.chat.id == maksim_chat_id:
         text = (
-            'Написать свой ник в яндекс директе и лимит затрат, мне придёт уведомление, запись появится в бд'
+            'Написать свой ник в яндекс директе и лимит затрат, мне придёт '
+            'уведомление, запись появится в бд.'
         )
         bot.send_message(message.chat.id, text)
         bot.register_next_step_handler(message, add_to_db)
@@ -37,10 +35,8 @@ def check(message: types.Message):
 
 
 def add_to_db(message: types.Message):
-    text = message.text.split()
-    with PostgreSQLConnection() as cursor:
-        insert_query = "INSERT INTO testusers (id, name) VALUES (%s, %s)"
-        cursor.execute(insert_query, text)
+    # менять поле just_registered на false
+    pass
 
 
 bot.polling(non_stop=True)

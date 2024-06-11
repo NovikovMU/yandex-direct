@@ -8,12 +8,12 @@ class PostgreSQLConnection:
             host=None,
             port=None,
             user=None
-        ) -> None:
+    ) -> None:
         self.password = password or 'mysecretpassword'
         self.host = host or 'localhost'
         self.port = port or '5432'
         self.user = user or 'postgres'
-    
+
     def __enter__(self):
         self.connection = psycopg2.connect(
             host=self.host,

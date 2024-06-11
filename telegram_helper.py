@@ -1,13 +1,11 @@
 import os
-import sys
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 from dotenv import load_dotenv
 import telebot
 from telebot import types
 
-from postgresql.create_connection import PostgreSQLConnection
+from create_connection import PostgreSQLConnection
+
 
 load_dotenv()
 bot_token = os.getenv('YANDEX_DIRECT_HELPER_API')
@@ -15,10 +13,11 @@ bot = telebot.TeleBot(bot_token)
 
 bot_manager_token = os.getenv('YANDEX_DIRECT_MANAGER_API')
 bot_manager = telebot.TeleBot(bot_manager_token)
+M_CHAT_ID = os.getenv('MAKSIM_CHAT_ID')
 
 
 @bot.message_handler(commands=['test'])
-def start(message: types.Message):
+def test(message: types.Message):
     bot.send_message(message.chat.id, message)
 
 
@@ -37,7 +36,7 @@ def how_add(message: types.Message):
 
 
 @bot.message_handler(commands=['set_account'])
-def add_account(message: types.Message):
+def set_account(message: types.Message):
     text = (
         'Напишите свой ник.'
     )
@@ -45,17 +44,17 @@ def add_account(message: types.Message):
     bot.register_next_step_handler(message, enter_data_in_db)
 
 
-@bot.message_handler(commands=['set_amount'])
-def add_amount(message: types.Message):
+@bot.message_handler(commands=['set_limit'])
+def add_limit(message: types.Message):
     text = (
-        'Введите сумму, которую не должен превышать дневной.'
+        'Введите сумму, которую не должен превышать дневной расход.'
     )
     bot.send_message(message.chat.id, text)
-    bot.register_next_step_handler(message, change_amount_in_db)
+    bot.register_next_step_handler(message, change_limit_in_db)
 
 
 @bot.message_handler(commands=['set_time'])
-def coordinates(message: types.Message):
+def add_time(message: types.Message):
     text = (
         'Пользователь может настроить рассылку на состояние кампаний по '
         'времени. Если ведено время + timezone, то появится запись в бд'
@@ -65,59 +64,52 @@ def coordinates(message: types.Message):
 
 @bot.message_handler(commands=['my_accounts'])
 def accounts(message: types.Message):
-
-    bot.send_message(message.chat.id, 'Доступные вам аккаунты яндекса директа', reply_markup=create_account_buttons())
+    # необходимо добавить reply_markup
+    bot.send_message(
+        message.chat.id,
+        'Доступные вам аккаунты яндекса директа'
+    )
 
 
 @bot.message_handler(commands=['help'])
-def coordinates(message: types.Message):
+def help(message: types.Message):
     text = (
         'Перечисление всех команд'
     )
     bot.send_message(message.chat.id, text)
 
 
-def create_account_buttons():
-    keyboard = types.InlineKeyboardMarkup()
-    ar = []
-    # if cash: fetch data from cash else: fetch data from db
-    # element for list 
-    button1 = types.InlineKeyboardButton("Креветки", callback_data='button1')
-    for i in range(1,7):
-        ar.append(button1)
-    keyboard.add(*ar)
-    # keyboard.add(button3)
-    return keyboard
-
-
-def change_amount_in_db(message: types.Message):
+def change_limit_in_db(message: types.Message):
     text = message.text.split()
     if len(text) > 1:
-        bot_manager.send_message(
+        bot.send_message(
             message.chat.id,
             'Верхняя граница расходов должна быть без пробелов.'
         )
-        bot.register_next_step_handler(message, change_amount_in_db)
+        bot.register_next_step_handler(message, change_limit_in_db)
         return
     # check if user call base function
     next_function = command_function.get(text[0])
     if next_function:
         next_function(message)
         return
-    if not isinstance(text[0], (int, float)):
-        bot_manager.send_message(
+    try:
+        upper_limit = int(text[0])
+    except ValueError:
+        bot.send_message(
             message.chat.id,
-            'Верхняя граница расходов должна быть числом.'
+            'Верхняя граница расходов должна быть целым числом.'
         )
-        bot.register_next_step_handler(message, change_amount_in_db)
+        bot.register_next_step_handler(message, change_limit_in_db)
+        return
     with PostgreSQLConnection() as cursor:
         cursor.execute(
             """
             UPDATE accounts
-            SET amount = %s
-            WHERE user_id = %s AND amount is NULL;
+            SET upper_limit = %s
+            WHERE user_id = %s AND upper_limit is NULL;
             """,
-            (text[0], message.chat.id)
+            (upper_limit, message.chat.id)
         )
     bot.send_message(
         message.chat.id, 'Регистрация закончилась.'
@@ -127,7 +119,7 @@ def change_amount_in_db(message: types.Message):
 def enter_data_in_db(message: types.Message):
     text = message.text.split()
     if len(text) > 1:
-        bot_manager.send_message(
+        bot.send_message(
             message.chat.id, 'Логин должен быть одним словом.'
         )
         bot.register_next_step_handler(message, enter_data_in_db)
@@ -149,16 +141,19 @@ def enter_data_in_db(message: types.Message):
             bot.register_next_step_handler(message, enter_data_in_db)
             return
 
+    first_name = message.chat.first_name
+    last_name = message.chat.last_name
+    username = message.chat.username
     with PostgreSQLConnection() as cursor:
         cursor.execute(
             """
-            INSERT INTO users (telegram_id)
-            VALUES (%s)
+            INSERT INTO users (telegram_id, first_name, last_name, username)
+            VALUES (%s, %s, %s, %s)
             ON CONFLICT (telegram_id) DO NOTHING
             """,
-            (message.chat.id,)
+            (message.chat.id, first_name, last_name, username)
         )
-        
+
     with PostgreSQLConnection() as cursor:
         cursor.execute(
             """
@@ -167,10 +162,14 @@ def enter_data_in_db(message: types.Message):
             """,
             (text[0], message.chat.id)
         )
-    bot.send_message(
-        message.chat.id, 'Введите количество.'
+    user_data = text[0] + ' ' + str(message.chat.id)
+    bot_manager.send_message(
+        M_CHAT_ID, user_data
     )
-    bot.register_next_step_handler(message, change_amount_in_db)
+    bot.send_message(
+        message.chat.id, 'Введите верхнюю границу расходов целым числом.'
+    )
+    bot.register_next_step_handler(message, change_limit_in_db)
 
 
 @bot.message_handler(func=lambda message: True)
@@ -184,8 +183,7 @@ def handle_unknown_command(message):
 
 
 command_function = {
-    '/add_account': add_account,
-    # '/locations': locations,
+    '/set_account': set_account,
     '/start': start,
 }
 
