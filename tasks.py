@@ -1,29 +1,17 @@
 from celery_app import app
-import telebot
-
 from fetch_data import fetch_data
 
-
-API_TOKEN = 'YOUR_TELEGRAM_BOT_API_TOKEN'
-bot = telebot.TeleBot(API_TOKEN)
-
+from telegram_helper import bot
 
 @app.task
-def check_limits(chat_id):
-    print(chat_id)
-    # bot.send_message(chat_id, "Вы попросили напомнить.")
+def check_limits(id):
+    bot.send_message(253892073, f"Вы попросили напомнить {id}.")
 
-
+@app.task
 def schedule_reminders():
-    results = fetch_data()
+    # Пример данных для демонстрации
+    results = [1, 2, 3, 5, 6, 7]
     for element in results:
-        print(element)
-        check_limits.apply_async((element[2]))
-
-
-app.conf.beat_schedule = {
-    'check-reminders-every-minute': {
-        'task': 'tasks.schedule_reminders',
-        'schedule': 60.0,  # Запускать каждые 60 секунд
-    }
-}
+        check_limits.apply_async((element,))
+# celery -A tasks worker --loglevel=info -P eventlet
+# celery -A celery_app beat --loglevel=info
