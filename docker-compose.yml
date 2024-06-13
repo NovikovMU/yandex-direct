@@ -1,19 +1,35 @@
 version: '3.8'
 
 services:
-  bots:
+  telegram:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ./
+      dockerfile: ./telegram/Dockerfile
+    container_name: telegram_container
     volumes:
-      - .:/app
+      - ./telegram:/app
+      - ./create_connection.py:/app/create_connection.py
+    env_file:
+      - .env
+
+  celery:
+    build:
+      context: ./
+      dockerfile: ./celery/Dockerfile
+    container_name: celery_container
+    volumes:
+      - ./celery:/app
+      - ./create_connection.py:/app/create_connection.py
+    depends_on:
+      - redis
+    env_file:
+      - .env
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
-    depends_on:
-      - redis
 
   redis:
-    image: redis:latest
+    image: "redis:alpine"
+    container_name: redis_container
     ports:
       - "6379:6379"
