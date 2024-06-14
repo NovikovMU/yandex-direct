@@ -11,6 +11,7 @@ services:
       - ./create_connection.py:/app/create_connection.py
     env_file:
       - .env
+    restart: always
 
   celery:
     build:
@@ -27,9 +28,11 @@ services:
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    restart: always
 
   redis:
     image: "redis:alpine"
     container_name: redis_container
     ports:
       - "6379:6379"
+    restart: always
