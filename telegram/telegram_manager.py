@@ -45,5 +45,6 @@ def add_to_db(message: types.Message):
     # менять поле just_registered на false
     pass
 
+
 if __name__ == '__main__':
     manager_bot.polling(non_stop=True)
