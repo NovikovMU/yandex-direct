@@ -4,39 +4,46 @@ from dotenv import load_dotenv
 import telebot
 from telebot import types
 
-from create_connection import PostgreSQLConnection
+# from create_connection import PostgreSQLConnection
+# from fetch_data import fetch_data, redis_connection
 
 
 load_dotenv()
 bot_token = os.getenv('YANDEX_DIRECT_MANAGER_API')
-bot = telebot.TeleBot(bot_token)
-maksim_chat_id = os.getenv('MAKSIM_CHAT_ID')
+manager_bot = telebot.TeleBot(bot_token)
+M_CHAT_ID = int(os.getenv('MANAGER_CHAT_ID'))
 
 
-@bot.message_handler(commands=['add'])
+@manager_bot.message_handler(commands=['start'])
+def start(message: types.Message):
+    text = ('Hello')
+    manager_bot.send_message(message.chat.id, text)
+
+
+@manager_bot.message_handler(commands=['add'])
 def add(message: types.Message):
-    if message.chat.id == maksim_chat_id:
+    if message.chat.id == M_CHAT_ID:
         text = (
             'Написать свой ник в яндекс директе и лимит затрат, мне придёт '
             'уведомление, запись появится в бд.'
         )
-        bot.send_message(message.chat.id, text)
-        bot.register_next_step_handler(message, add_to_db)
+        manager_bot.send_message(message.chat.id, text)
+        manager_bot.register_next_step_handler(message, add_to_db)
 
 
-@bot.message_handler(commands=['check'])
-def check(message: types.Message):
-    if message.chat.id == maksim_chat_id:
-        with PostgreSQLConnection() as cursor:
-            cursor.execute("SELECT * FROM testusers")
-            query = cursor.fetchall()
-            for element in query:
-                bot.send_message(maksim_chat_id, str(element))
+# @manager_bot.message_handler(commands=['check'])
+# def check(message: types.Message):
+#     if message.chat.id == M_CHAT_ID:
+#         with PostgreSQLConnection() as cursor:
+#             cursor.execute("SELECT * FROM testusers")
+#             query = cursor.fetchall()
+#             for element in query:
+#                 manager_bot.send_message(M_CHAT_ID, str(element))
 
 
 def add_to_db(message: types.Message):
     # менять поле just_registered на false
     pass
 
-
-bot.polling(non_stop=True)
+if __name__ == '__main__':
+    manager_bot.polling(non_stop=True)

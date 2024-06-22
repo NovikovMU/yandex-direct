@@ -4,12 +4,12 @@ import json
 from create_connection import PostgreSQLConnection
 
 
-r = redis.Redis(host='localhost', port=6379, db=0)
+redis_connection = redis.Redis(host='localhost', port=6379, db=0)
 
 
 def fetch_data():
     with PostgreSQLConnection() as cursor:
-        cached_data = r.get('accounts_list')
+        cached_data = redis_connection.get('accounts_list')
         if cached_data:
             result = json.loads(cached_data)
         else:
@@ -23,5 +23,5 @@ def fetch_data():
                 """
             )
             result = cursor.fetchall()
-            r.set('accounts_list', json.dumps(result))
+            redis_connection.set('accounts_list', json.dumps(result))
     return result

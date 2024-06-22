@@ -1,0 +1,5 @@
+FROM yandex-base
+
+COPY telegram /app
+
+CMD ["./telegram_start.sh"]

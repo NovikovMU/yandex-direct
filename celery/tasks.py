@@ -1,24 +1,25 @@
+import os
+
+import eventlet
+import telebot
+from dotenv import load_dotenv
+
 from celery_app import app
-from fetch_data import fetch_data
+from celery.exceptions import SoftTimeLimitExceeded
 
-from telegram_helper import bot
+load_dotenv()
+bot_helper = os.getenv('YANDEX_DIRECT_HELPER_API')
+M_CHAT_ID = os.getenv('MANAGER_CHAT_ID')
+bot = telebot.TeleBot(bot_helper)
 
-@app.task(max_retries=5)
-def check_limits(id):
-    bot.send_message(253892073, f"Вы попросили напомнить {id}.")
+@app.task(time_limit=2, max_retries=5)
+def time_task():
+    import time
+    time.sleep(3)
+    bot.send_message(M_CHAT_ID, 'task is finished.')
+
 
 @app.task
 def schedule_reminders():
     # Пример данных для демонстрации
-    results = [1, 2, 3, 5, 6, 7]
-    for element in results:
-        check_limits.apply_async((element,), soft_time_limit=10)
-# celery -A tasks worker --loglevel=info -P eventlet
-# celery -A celery_app beat --loglevel=info
-
-
-@app.task(max_retries=5, time_limit=5)
-def time(id):
-    import time
-    time.sleep(10)
-    bot.send_message(253892073, f"Вы попросили напомнить {id}.")
+    bot.send_message(M_CHAT_ID, 'task is finished.')

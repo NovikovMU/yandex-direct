@@ -13,12 +13,8 @@ bot = telebot.TeleBot(bot_token)
 
 bot_manager_token = os.getenv('YANDEX_DIRECT_MANAGER_API')
 bot_manager = telebot.TeleBot(bot_manager_token)
-M_CHAT_ID = os.getenv('MAKSIM_CHAT_ID')
 
-
-@bot.message_handler(commands=['test'])
-def test(message: types.Message):
-    bot.send_message(message.chat.id, message)
+M_CHAT_ID = os.getenv('MANAGER_CHAT_ID')
 
 
 @bot.message_handler(commands=['start'])
@@ -187,4 +183,5 @@ command_function = {
     '/start': start,
 }
 
-bot.polling(non_stop=True)
+if __name__ == '__main__':
+    bot.polling(non_stop=True)

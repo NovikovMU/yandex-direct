@@ -11,7 +11,6 @@ click-repl==0.3.0
 colorama==0.4.6
 dnspython==2.6.1
 eventlet==0.36.1
-flake8==7.0.0
 greenlet==3.0.3
 idna==3.7
 kombu==5.3.7

@@ -1,33 +1,39 @@
 version: '3.8'
 
 services:
+  base:
+    build:
+      context: .
+      dockerfile: Dockerfile.base
+    image: yandex-base
+    container_name: base
+    env_file:
+      - .env
+
   telegram:
     build:
-      context: ./
-      dockerfile: ./telegram/Dockerfile
+      context: .
+      dockerfile: Dockerfile.telegram
     container_name: telegram_container
-    volumes:
-      - ./telegram:/app
-      - ./create_connection.py:/app/create_connection.py
+    depends_on:
+      - base
     env_file:
       - .env
     restart: always
 
   celery:
     build:
-      context: ./
-      dockerfile: ./celery/Dockerfile
+      context: .
+      dockerfile: Dockerfile.celery
     container_name: celery_container
-    volumes:
-      - ./celery:/app
-      - ./create_connection.py:/app/create_connection.py
     depends_on:
       - redis
+      - base
     env_file:
       - .env
     environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
     restart: always
 
   redis:

@@ -1,8 +1,12 @@
-FROM python:3.9-slim
-WORKDIR /app
-COPY ../requirements.txt .
+FROM python:3.8-slim
 
-# Установить зависимости
-RUN pip install -r requirements.txt
+WORKDIR /app
+
+
 COPY . .
-CMD ["celery", "-A", "celery_app", "worker", "--loglevel=info"]
+
+RUN chmod +x /app/start.sh
+
+RUN pip install -r requirements.txt
+
+CMD ["./start.sh"]

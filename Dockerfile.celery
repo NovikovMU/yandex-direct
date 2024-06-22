@@ -1,0 +1,5 @@
+FROM yandex-base
+
+COPY celery /app
+
+CMD ["./celery_start.sh"]
