@@ -12,14 +12,19 @@ M_CHAT_ID = os.getenv('MANAGER_CHAT_ID')
 bot = telebot.TeleBot(bot_helper)
 
 
-@app.task(time_limit=2, max_retries=5)
-def time_task():
-    import time
-    time.sleep(3)
-    bot.send_message(M_CHAT_ID, 'task is finished.')
+@app.task
+def donation_alert():
+    # send all verified person about donation
+    pass
 
 
 @app.task
-def schedule_reminders():
-    # Пример данных для демонстрации
-    bot.send_message(M_CHAT_ID, 'task is finished.')
+def daily_stat():
+    # send statistic about your account
+    pass
+
+
+@app.task(time_limit=3, soft_time_limit=2)
+def amount_check():
+    # check all account's spend limit
+    pass
