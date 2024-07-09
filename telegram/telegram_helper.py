@@ -2,29 +2,28 @@ import os
 
 from dotenv import load_dotenv
 import telebot
-from telebot import types
+from telebot.types import Message
 
 from create_connection import PostgreSQLConnection
+from telegram_manager import confirm_account
 
 
 load_dotenv()
 bot_token = os.getenv('YANDEX_DIRECT_HELPER_API')
 bot = telebot.TeleBot(bot_token)
 
-bot_manager_token = os.getenv('YANDEX_DIRECT_MANAGER_API')
-bot_manager = telebot.TeleBot(bot_manager_token)
 
 M_CHAT_ID = os.getenv('MANAGER_CHAT_ID')
 
 
 @bot.message_handler(commands=['start'])
-def start(message: types.Message):
+def start(message: Message):
     text = ('Hello')
     bot.send_message(message.chat.id, text)
 
 
 @bot.message_handler(commands=['how_add'])
-def how_add(message: types.Message):
+def how_add(message: Message):
     text = (
         'Текст как добавить аккаунт для обозрения'
     )
@@ -32,7 +31,7 @@ def how_add(message: types.Message):
 
 
 @bot.message_handler(commands=['set_account'])
-def set_account(message: types.Message):
+def set_account(message: Message):
     text = (
         'Напишите свой ник.'
     )
@@ -41,7 +40,7 @@ def set_account(message: types.Message):
 
 
 @bot.message_handler(commands=['set_limit'])
-def add_limit(message: types.Message):
+def add_limit(message: Message):
     text = (
         'Введите сумму, которую не должен превышать дневной расход.'
     )
@@ -50,7 +49,7 @@ def add_limit(message: types.Message):
 
 
 @bot.message_handler(commands=['set_time'])
-def add_time(message: types.Message):
+def add_time(message: Message):
     text = (
         'Пользователь может настроить рассылку на состояние кампаний по '
         'времени. Если ведено время + timezone, то появится запись в бд'
@@ -59,23 +58,51 @@ def add_time(message: types.Message):
 
 
 @bot.message_handler(commands=['my_accounts'])
-def accounts(message: types.Message):
-    # необходимо добавить reply_markup
+def accounts(message: Message):
+    with PostgreSQLConnection() as cursor:
+        cursor.execute(
+            '''
+                SELECT name, upper_limit, is_verified
+                FROM accounts WHERE user_id = %s
+            ''',
+            (message.chat.id,)
+        )
+        data = cursor.fetchall()
+    if not data:
+        bot.send_message(
+            message.chat.id,
+            'У вас нет никаких аккаунтов, запустите команду /set_account'
+        )
+        return
+    markup = telebot.types.InlineKeyboardMarkup()
+    ar = []
+    for i in range(len(data)):
+        account = data[i]
+        name = account[0]
+        account = '|'.join(account)
+        button = telebot.types.InlineKeyboardButton(
+            name,
+            callback_data='account|' + account
+        )
+        ar.append(button)
+    markup.add(*ar)
+
     bot.send_message(
         message.chat.id,
-        'Доступные вам аккаунты яндекса директа'
+        'Ваши аккаунты.',
+        reply_markup=markup
     )
 
 
 @bot.message_handler(commands=['help'])
-def help(message: types.Message):
+def help(message: Message):
     text = (
         'Перечисление всех команд'
     )
     bot.send_message(message.chat.id, text)
 
 
-def change_limit_in_db(message: types.Message):
+def change_limit_in_db(message: Message):
     text = message.text.split()
     if len(text) > 1:
         bot.send_message(
@@ -108,11 +135,13 @@ def change_limit_in_db(message: types.Message):
             (upper_limit, message.chat.id)
         )
     bot.send_message(
-        message.chat.id, 'Регистрация закончилась.'
+        message.chat.id,
+        'Подтвердите, что вы являетесь владельцем этого аккаунта'
     )
+    bot.register_next_step_handler(message, verify_account)
 
 
-def enter_data_in_db(message: types.Message):
+def enter_data_in_db(message: Message):
     text = message.text.split()
     if len(text) > 1:
         bot.send_message(
@@ -128,7 +157,7 @@ def enter_data_in_db(message: types.Message):
     with PostgreSQLConnection() as cursor:
         cursor.execute(
                 'SELECT 1 FROM accounts WHERE name = %s',
-                (text[0],)
+                (message.text,)
             )
         if cursor.fetchone() is not None:
             bot.send_message(
@@ -156,26 +185,35 @@ def enter_data_in_db(message: types.Message):
             INSERT INTO accounts (name, user_id)
             VALUES (%s, %s)
             """,
-            (text[0], message.chat.id)
+            (message.text, message.chat.id)
         )
-    user_data = text[0] + ' ' + str(message.chat.id)
-    bot_manager.send_message(
-        M_CHAT_ID, user_data
-    )
+    confirm_account(text[0])
     bot.send_message(
         message.chat.id, 'Введите верхнюю границу расходов целым числом.'
     )
     bot.register_next_step_handler(message, change_limit_in_db)
 
 
+def verify_account(message: Message):
+    pass
+
+
 @bot.message_handler(func=lambda message: True)
-def handle_unknown_command(message):
+def handle_unknown_command(message: Message):
     if message.text.startswith('/'):
         command = command_function.get(message)
         if not command:
             bot.send_message(message.chat.id, "Такой команды нет.")
     else:
         bot.send_message(message.chat.id, "Я не понимаю этот запрос.")
+
+
+@bot.callback_query_handler(
+    func=lambda
+    call: call.data.startswith('account')
+)
+def callback_query(call):
+    pass
 
 
 command_function = {

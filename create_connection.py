@@ -10,7 +10,7 @@ class PostgreSQLConnection:
             user=None
     ) -> None:
         self.password = password or 'mysecretpassword'
-        self.host = host or 'localhost'
+        self.host = host or 'db'
         self.port = port or '5432'
         self.user = user or 'postgres'
 

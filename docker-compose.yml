@@ -17,24 +17,25 @@ services:
     container_name: telegram_container
     depends_on:
       - base
+      - db
     env_file:
       - .env
     restart: always
 
-  celery:
-    build:
-      context: .
-      dockerfile: Dockerfile.celery
-    container_name: celery_container
-    depends_on:
-      - redis
-      - base
-    env_file:
-      - .env
-    environment:
-      - CELERY_BROKER_URL=redis://redis:6379/1
-      - CELERY_RESULT_BACKEND=redis://redis:6379/1
-    restart: always
+  # celery:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.celery
+  #   container_name: celery_container
+  #   depends_on:
+  #     - redis
+  #     - base
+  #   env_file:
+  #     - .env
+  #   environment:
+  #     - CELERY_BROKER_URL=redis://redis:6379/1
+  #     - CELERY_RESULT_BACKEND=redis://redis:6379/1
+  #   restart: always
 
   redis:
     image: "redis:alpine"
@@ -42,3 +43,19 @@ services:
     ports:
       - "6379:6379"
     restart: always
+
+  db:
+    image: postgres:13
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: mysecretpassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    restart: always
+
+volumes:
+  db_data:
+    name: db_data
