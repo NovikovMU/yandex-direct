@@ -1,3 +1,4 @@
+import json
 import os
 
 from dotenv import load_dotenv
@@ -36,7 +37,10 @@ def set_account(message: Message):
         'Напишите свой ник.'
     )
     bot.send_message(message.chat.id, text)
-    bot.register_next_step_handler(message, enter_data_in_db)
+    bot.register_next_step_handler(
+        message,
+        lambda m: enter_data_in_db(m)
+    )
 
 
 @bot.message_handler(commands=['set_limit'])
@@ -79,14 +83,13 @@ def accounts(message: Message):
     for i in range(len(data)):
         account = data[i]
         name = account[0]
-        account = '|'.join(account)
+        str_account = json.dumps(account)
         button = telebot.types.InlineKeyboardButton(
             name,
-            callback_data='account|' + account
+            callback_data='account|' + str_account
         )
         ar.append(button)
     markup.add(*ar)
-
     bot.send_message(
         message.chat.id,
         'Ваши аккаунты.',
@@ -141,13 +144,16 @@ def change_limit_in_db(message: Message):
     bot.register_next_step_handler(message, verify_account)
 
 
-def enter_data_in_db(message: Message):
+def enter_data_in_db(message: Message, account_name=None):
     text = message.text.split()
     if len(text) > 1:
         bot.send_message(
             message.chat.id, 'Логин должен быть одним словом.'
         )
-        bot.register_next_step_handler(message, enter_data_in_db)
+        bot.register_next_step_handler(
+            message,
+            lambda m: enter_data_in_db(m, account_name)
+        )
         return
     # check if user call base function
     next_function = command_function.get(text[0])
@@ -163,9 +169,12 @@ def enter_data_in_db(message: Message):
             bot.send_message(
                 message.chat.id, 'Вы ввели существующий аккаунт.'
             )
-            bot.register_next_step_handler(message, enter_data_in_db)
+            bot.register_next_step_handler(
+                message,
+                lambda m: enter_data_in_db(m, account_name)
+            )
             return
-
+    account_name = account_name if account_name else message.text
     first_name = message.chat.first_name
     last_name = message.chat.last_name
     username = message.chat.username
@@ -185,7 +194,7 @@ def enter_data_in_db(message: Message):
             INSERT INTO accounts (name, user_id)
             VALUES (%s, %s)
             """,
-            (message.text, message.chat.id)
+            (account_name, message.chat.id)
         )
     confirm_account(text[0])
     bot.send_message(
@@ -213,6 +222,18 @@ def handle_unknown_command(message: Message):
     call: call.data.startswith('account')
 )
 def callback_query(call):
+    data = json.loads(call.data.split('|')[1])
+    is_auntification = 'подтверждён' if bool(data[2]) else 'не подтверждён'
+    text = (
+        f'Ваш аккуант - {data[0]}. Ваш лимит для аккаунта - {data[1]} ' +
+        f'Ваш аккаунт {is_auntification}'
+    )
+    bot.edit_message_text(
+        chat_id=call.message.chat.id,
+        message_id=call.message.message_id,
+        text=text,
+        # reply_markup=create_inline_button()
+    )
     pass
 
 
