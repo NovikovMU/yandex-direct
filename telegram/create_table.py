@@ -4,10 +4,6 @@ from create_connection import PostgreSQLConnection
 def create_table():
     with PostgreSQLConnection() as cursor:
         cursor.execute("""
-        DROP TABLE IF EXISTS users, accounts CASCADE
-        """)
-
-        cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             telegram_id INTEGER PRIMARY KEY,
             first_name TEXT,
@@ -23,9 +19,14 @@ def create_table():
             name TEXT NOT NULL UNIQUE,
             upper_limit INTEGER,
             demand_time TIMESTAMPTZ,
+            is_entered_into_user_list BOOLEAN DEFAULT FALSE,
             is_verified BOOLEAN DEFAULT FALSE,
             CONSTRAINT fk_user
                 FOREIGN KEY (user_id)
                 REFERENCES users (telegram_id)
         );
         """)
+
+
+if __name__ == '__main__':
+    create_table()
